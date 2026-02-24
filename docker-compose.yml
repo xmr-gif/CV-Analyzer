@@ -1,0 +1,64 @@
+services:
+    php:
+        build:
+            context: .
+            dockerfile: docker/php/Dockerfile
+        container_name: cv_analyzer_php
+        volumes:
+            - .:/var/www/symfony
+        networks:
+            - cv_analyzer_network
+        depends_on:
+            - sqlserver
+
+    nginx:
+        image: nginx:alpine
+        container_name: cv_analyzer_nginx
+        ports:
+            - "8081:80"
+        volumes:
+            - .:/var/www/symfony
+            - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+        networks:
+            - cv_analyzer_network
+        depends_on:
+            - php
+
+    sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        container_name: cv_analyzer_sqlserver
+        environment:
+            ACCEPT_EULA: "Y"
+            SA_PASSWORD: "${DB_PASSWORD}"
+            MSSQL_PID: "Developer"
+        ports:
+            - "1433:1433"
+        volumes:
+            - sqlserver_data:/var/opt/mssql
+        networks:
+            - cv_analyzer_network
+
+###> doctrine/doctrine-bundle ###
+    database:
+        image: postgres:${POSTGRES_VERSION:-16}-alpine
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB:-app}
+            # You should definitely change the password in production
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+            POSTGRES_USER: ${POSTGRES_USER:-app}
+        healthcheck:
+            test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+            timeout: 5s
+            retries: 5
+            start_period: 60s
+        volumes:
+            - database_data:/var/lib/postgresql/data:rw
+
+networks:
+    cv_analyzer_network:
+        driver: bridge
+
+volumes:
+    sqlserver_data:
+
+    database_data:
