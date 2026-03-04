@@ -10,7 +10,17 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     gnupg2 \
-    apt-transport-https
+    apt-transport-https \
+    python3 \
+    python3-pip \
+    python3-venv \
+    libgl1 \
+    libglib2.0-0
+
+# Install Python requirements
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+RUN pip3 install pymupdf easyocr language-tool-python spacy pandas opencv-python pillow langdetect
+RUN python3 -m spacy download en_core_web_sm
 
 # Install Microsoft ODBC Driver for SQL Server
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg \

@@ -6,6 +6,7 @@ services:
         container_name: cv_analyzer_php
         volumes:
             - .:/var/www/symfony
+            - ../Python AI :/var/www/Python AI 
         networks:
             - cv_analyzer_network
         depends_on:
@@ -15,7 +16,7 @@ services:
         image: nginx:alpine
         container_name: cv_analyzer_nginx
         ports:
-            - "8081:80"
+            - "8082:80"
         volumes:
             - .:/var/www/symfony
             - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
@@ -31,12 +32,23 @@ services:
             ACCEPT_EULA: "Y"
             SA_PASSWORD: "${DB_PASSWORD}"
             MSSQL_PID: "Developer"
-        ports:
-            - "1433:1433"
         volumes:
             - sqlserver_data:/var/opt/mssql
         networks:
             - cv_analyzer_network
+
+    redis:
+        image: redis:7-alpine
+        container_name: cv_analyzer_redis
+        volumes:
+            - redis_data:/data
+        networks:
+            - cv_analyzer_network
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
 ###> doctrine/doctrine-bundle ###
     database:
@@ -62,3 +74,5 @@ volumes:
     sqlserver_data:
 
     database_data:
+
+    redis_data:

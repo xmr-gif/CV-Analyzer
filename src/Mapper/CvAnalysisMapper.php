@@ -14,7 +14,8 @@ class CvAnalysisMapper
         return new CvAnalysisResultDto(
             mistakes: $data['mistakes'] ?? [],
             score: (float) ($data['score'] ?? 0),
-            summary: $data['summary'] ?? ''
+            summary: $data['summary'] ?? '',
+            language: $data['language'] ?? 'unknown'
         );
     }
 }
