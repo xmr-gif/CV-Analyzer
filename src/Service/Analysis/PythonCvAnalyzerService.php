@@ -32,7 +32,7 @@ class PythonCvAnalyzerService implements CvAnalyzerInterface
             // Cache miss: run the full Python analysis
             $item->expiresAfter(604800); // 7 days
 
-            $pythonPath = $this->projectDir . '/../Python AI/cv_analyzer.py';
+            $pythonPath = $this->projectDir . '/../Python AI /cv_analyzer.py';
 
             $process = new Process(['python3', $pythonPath, $filePath, $originalExtension]);
             $process->setTimeout(180);
@@ -79,7 +79,7 @@ class PythonCvAnalyzerService implements CvAnalyzerInterface
         $data = $this->cache->get($cacheKey, function (ItemInterface $item) use ($jsonData) {
             $item->expiresAfter(604800); // 7 days
 
-            $pythonPath = $this->projectDir . '/../Python AI/cv_analyzer.py';
+            $pythonPath = $this->projectDir . '/../Python AI /cv_analyzer.py';
 
             // Pass the JSON data as the first argument, and '--json' as the second
             $process = new Process(['python3', $pythonPath, $jsonData, '--json']);
