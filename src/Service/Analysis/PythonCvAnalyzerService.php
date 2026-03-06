@@ -33,8 +33,10 @@ class PythonCvAnalyzerService implements CvAnalyzerInterface
             $item->expiresAfter(604800); // 7 days
 
             $pythonPath = $this->projectDir . '/../Python AI /cv_analyzer.py';
+            $venvPython = $this->projectDir . '/../Python AI /.venv/bin/python3';
+            $pythonExecutable = file_exists($venvPython) ? $venvPython : 'python3';
 
-            $process = new Process(['python3', $pythonPath, $filePath, $originalExtension]);
+            $process = new Process([$pythonExecutable, $pythonPath, $filePath, $originalExtension]);
             $process->setTimeout(180);
 
             // Ensure the subprocess can find Java (required by language-tool-python)
@@ -80,9 +82,11 @@ class PythonCvAnalyzerService implements CvAnalyzerInterface
             $item->expiresAfter(604800); // 7 days
 
             $pythonPath = $this->projectDir . '/../Python AI /cv_analyzer.py';
+            $venvPython = $this->projectDir . '/../Python AI /.venv/bin/python3';
+            $pythonExecutable = file_exists($venvPython) ? $venvPython : 'python3';
 
             // Pass the JSON data as the first argument, and '--json' as the second
-            $process = new Process(['python3', $pythonPath, $jsonData, '--json']);
+            $process = new Process([$pythonExecutable, $pythonPath, $jsonData, '--json']);
             $process->setTimeout(180);
 
             $process->setEnv([
