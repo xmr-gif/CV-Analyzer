@@ -104,6 +104,38 @@ class CvAnalysisController extends AbstractController
         }
     }
 
+    #[Route('/analyze-text', name: 'analyze_text', methods: ['POST'])]
+    public function analyzeText(Request $request): JsonResponse
+    {
+        $content = $request->getContent();
+        $data = json_decode($content, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($data['text'])) {
+            return new JsonResponse(
+                ['error' => 'Invalid JSON payload or missing "text" field'],
+                JsonResponse::HTTP_BAD_REQUEST
+            );
+        }
+
+        $text = $data['text'];
+
+        if (empty(trim($text))) {
+            return new JsonResponse(
+                ['error' => 'CV text cannot be empty'],
+                JsonResponse::HTTP_BAD_REQUEST
+            );
+        }
+
+        try {
+            // Encode just the text into a JSON object to pass securely to the Python script
+            $jsonPayload = json_encode(['text' => $text], JSON_UNESCAPED_UNICODE);
+            $result = $this->cvAnalyzer->analyzeFromJson($jsonPayload);
+            return new JsonResponse($result);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
     /**
      * Verify that the first bytes of the file match the expected magic bytes
      * for the given MIME type. This prevents attacks where a malicious file

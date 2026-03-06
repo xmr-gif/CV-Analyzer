@@ -32,10 +32,65 @@ class PythonCvAnalyzerService implements CvAnalyzerInterface
             // Cache miss: run the full Python analysis
             $item->expiresAfter(604800); // 7 days
 
-            $pythonPath = $this->projectDir . '/../Python AI /cv_analyzer.py';
+            $pythonPath = $this->projectDir . '/../Python AI/cv_analyzer.py';
 
             $process = new Process(['python3', $pythonPath, $filePath, $originalExtension]);
             $process->setTimeout(180);
+
+            // Ensure the subprocess can find Java (required by language-tool-python)
+            // PHP-FPM runs with a restricted PATH that may not include /usr/bin
+            $process->setEnv([
+                'PATH' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+                'JAVA_HOME' => '/usr',
+                'HOME' => '/tmp',
+            ]);
+
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                throw new ProcessFailedException($process);
+            }
+
+            $output = $process->getOutput();
+            $data = json_decode($output, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \RuntimeException('Failed to parse Python result: ' . json_last_error_msg());
+            }
+
+            if (isset($data['error'])) {
+                throw new \RuntimeException('Python analysis error: ' . $data['error']);
+            }
+
+            return $data;
+        });
+
+        return $this->mapper->mapToDto($data);
+    }
+
+    public function analyzeFromJson(string $jsonData): CvAnalysisResultDto
+    {
+        set_time_limit(180);
+
+        // Compute SHA-256 hash of the JSON content
+        $jsonHash = hash('sha256', $jsonData);
+        $cacheKey = 'cv_analysis_json_' . $jsonHash;
+
+        $data = $this->cache->get($cacheKey, function (ItemInterface $item) use ($jsonData) {
+            $item->expiresAfter(604800); // 7 days
+
+            $pythonPath = $this->projectDir . '/../Python AI/cv_analyzer.py';
+
+            // Pass the JSON data as the first argument, and '--json' as the second
+            $process = new Process(['python3', $pythonPath, $jsonData, '--json']);
+            $process->setTimeout(180);
+
+            $process->setEnv([
+                'PATH' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+                'JAVA_HOME' => '/usr',
+                'HOME' => '/tmp',
+            ]);
+
             $process->run();
 
             if (!$process->isSuccessful()) {
