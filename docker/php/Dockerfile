@@ -15,11 +15,16 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-venv \
     libgl1 \
-    libglib2.0-0
+    libglib2.0-0 \
+    default-jre \
+    tesseract-ocr \
+    tesseract-ocr-fra \
+    tesseract-ocr-spa \
+    tesseract-ocr-rus
 
 # Install Python requirements
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
-RUN pip3 install pymupdf easyocr language-tool-python spacy pandas opencv-python pillow langdetect
+RUN pip3 install pymupdf pytesseract language-tool-python spacy pandas opencv-python pillow langdetect python-dotenv mistralai extcolors
 RUN python3 -m spacy download en_core_web_sm
 
 # Install Microsoft ODBC Driver for SQL Server
