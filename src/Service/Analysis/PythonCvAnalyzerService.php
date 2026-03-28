@@ -21,7 +21,7 @@ class PythonCvAnalyzerService implements CvAnalyzerInterface
     public function analyze(string $filePath, string $originalExtension = ''): CvAnalysisResultDto
     {
         // Increase limits to account for LLM processing and OCR which can take >30s
-        set_time_limit(180);
+        set_time_limit(300);
 
         // Compute SHA-256 hash of the file content
         $fileHash = hash_file('sha256', $filePath);
@@ -32,20 +32,15 @@ class PythonCvAnalyzerService implements CvAnalyzerInterface
             // Cache miss: run the full Python analysis
             $item->expiresAfter(604800); // 7 days
 
-            $pythonPath = $this->projectDir . '/../Python AI /cv_analyzer.py';
-            $venvPython = $this->projectDir . '/../Python AI /.venv/bin/python3';
-            $pythonExecutable = file_exists($venvPython) ? $venvPython : 'python3';
+            [$pythonExecutable, $pythonPath] = $this->getPythonPaths();
 
             $process = new Process([$pythonExecutable, $pythonPath, $filePath, $originalExtension]);
-            $process->setTimeout(180);
+            $process->setTimeout(300);
 
-            // Ensure the subprocess can find Java (required by language-tool-python)
-            // PHP-FPM runs with a restricted PATH that may not include /usr/bin
-            $process->setEnv([
-                'PATH' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
-                'JAVA_HOME' => '/usr',
-                'HOME' => '/tmp',
-            ]);
+            // Inherit the environment variables from the current process
+            // This ensures that Java, Python, and the user's home directory (cache) are found
+            // Only add PATH if it's not already set
+            $process->setEnv(['PATH' => getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin']);
 
             $process->run();
 
@@ -72,7 +67,7 @@ class PythonCvAnalyzerService implements CvAnalyzerInterface
 
     public function analyzeFromJson(string $jsonData): CvAnalysisResultDto
     {
-        set_time_limit(180);
+        set_time_limit(300);
 
         // Compute SHA-256 hash of the JSON content
         $jsonHash = hash('sha256', $jsonData);
@@ -81,19 +76,13 @@ class PythonCvAnalyzerService implements CvAnalyzerInterface
         $data = $this->cache->get($cacheKey, function (ItemInterface $item) use ($jsonData) {
             $item->expiresAfter(604800); // 7 days
 
-            $pythonPath = $this->projectDir . '/../Python AI /cv_analyzer.py';
-            $venvPython = $this->projectDir . '/../Python AI /.venv/bin/python3';
-            $pythonExecutable = file_exists($venvPython) ? $venvPython : 'python3';
+            [$pythonExecutable, $pythonPath] = $this->getPythonPaths();
 
             // Pass the JSON data as the first argument, and '--json' as the second
             $process = new Process([$pythonExecutable, $pythonPath, $jsonData, '--json']);
-            $process->setTimeout(180);
+            $process->setTimeout(300);
 
-            $process->setEnv([
-                'PATH' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
-                'JAVA_HOME' => '/usr',
-                'HOME' => '/tmp',
-            ]);
+            $process->setEnv(['PATH' => getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin']);
 
             $process->run();
 
@@ -116,5 +105,32 @@ class PythonCvAnalyzerService implements CvAnalyzerInterface
         });
 
         return $this->mapper->mapToDto($data);
+    }
+    /**
+     * Safely resolve the Python directory path, accounting for Docker stripping
+     * the trailing space from 'Python AI '.
+     * 
+     * @return array{0: string, 1: string} [pythonExecutable, pythonScriptPath]
+     */
+    private function getPythonPaths(): array
+    {
+        $baseDirs = [
+            $this->projectDir . '/../Python AI',
+            $this->projectDir . '/../Python AI ',
+        ];
+        
+        $pythonDir = $baseDirs[0]; // fallback
+        foreach ($baseDirs as $dir) {
+            if (is_dir($dir)) {
+                $pythonDir = $dir;
+                break;
+            }
+        }
+        
+        $pythonPath = $pythonDir . '/cv_analyzer.py';
+        $venvPython = $pythonDir . '/.venv/bin/python3';
+        $pythonExecutable = file_exists($venvPython) ? $venvPython : 'python3';
+        
+        return [$pythonExecutable, $pythonPath];
     }
 }

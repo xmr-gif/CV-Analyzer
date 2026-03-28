@@ -45,6 +45,7 @@ class CvAnalysisController extends AbstractController
     #[Route('/upload', name: 'upload', methods: ['POST'])]
     public function upload(Request $request): JsonResponse
     {
+        set_time_limit(300);
         /** @var UploadedFile|null $file */
         $file = $request->files->get('cv');
 
@@ -107,6 +108,7 @@ class CvAnalysisController extends AbstractController
     #[Route('/analyze-text', name: 'analyze_text', methods: ['POST'])]
     public function analyzeText(Request $request): JsonResponse
     {
+        set_time_limit(300);
         $content = $request->getContent();
         $data = json_decode($content, true);
 

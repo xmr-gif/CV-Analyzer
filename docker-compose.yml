@@ -7,6 +7,8 @@ services:
         volumes:
             - .:/var/www/symfony
             - ../Python AI :/var/www/Python AI 
+            - ~/.cache/language_tool_python:/var/www/.cache/language_tool_python
+            - ~/.cache/language_tool_python:/root/.cache/language_tool_python
         networks:
             - cv_analyzer_network
         depends_on:
